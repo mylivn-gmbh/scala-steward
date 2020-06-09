@@ -38,7 +38,7 @@ final case class Version(value: String) {
     * Implements the scheme described in this FAQ:
     * https://github.com/fthomas/scala-steward/blob/master/docs/faq.md#how-does-scala-steward-decide-what-version-it-is-updating-to
     */
-  def selectNext(versions: List[Version]): Option[Version] = {
+  def selectNext(versions: List[Version], allowPreRelease: Boolean = false): Option[Version] = {
     val cutoff = preReleaseIndex.fold(alnumComponents.size)(_.value - 1)
     val newerVersionsByCommonPrefix =
       versions
@@ -52,15 +52,17 @@ final case class Version(value: String) {
       .flatMap {
         case (commonPrefix, vs) =>
           vs.filterNot { v =>
-            // Do not select pre-release versions of a different series.
-            (v.isPreRelease && cutoff =!= commonPrefix.length) ||
-            // Do not select versions with a '+' or '-' if this is version does not
-            // contain such separator.
-            // E.g. 1.2.0 -> 1.2.0+17-7ef98061 or 3.1.0 -> 3.1.0-2156c0e.
-            (v.containsHyphen && !containsHyphen) ||
-            (v.containsPlus && !containsPlus) ||
-            // Don't select "versions" like %5BWARNING%5D.
-            !v.startsWithLetterOrDigit
+            !allowPreRelease && (
+              // Do not select pre-release versions of a different series.
+              (v.isPreRelease && cutoff =!= commonPrefix.length) ||
+              // Do not select versions with a '+' or '-' if this is version does not
+              // contain such separator.
+              // E.g. 1.2.0 -> 1.2.0+17-7ef98061 or 3.1.0 -> 3.1.0-2156c0e.
+              (v.containsHyphen && !containsHyphen) ||
+              (v.containsPlus && !containsPlus) ||
+              // Don't select "versions" like %5BWARNING%5D.
+              !v.startsWithLetterOrDigit
+            )
           }.sorted
       }
       .lastOption

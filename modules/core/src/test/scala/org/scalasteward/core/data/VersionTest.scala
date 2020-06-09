@@ -186,6 +186,22 @@ class VersionTest
     }
   }
 
+  test("selectNext, table 3") {
+    val nextVersions = Table(
+      ("current", "versions", "result"),
+      ("1.2.2", List("1.3.0-RC4", "1.3.0-RC5"), Some("1.3.0-RC5")),
+      ("1.2.2", List("1.3.0-RC4", "1.3.0-RC5", "1.3.0"), Some("1.3.0")),
+      ("1.2.2", List("1.3.0-RC4", "1.3.0-RC5", "1.3.1"), Some("1.3.1"))
+    )
+
+    val rnd = new Random()
+    forAll(nextVersions) { (current, versions, result) =>
+      Version(current)
+        .selectNext(rnd.shuffle(versions).map(Version.apply), allowPreRelease = true) shouldBe
+        result.map(Version.apply)
+    }
+  }
+
   test("Component: round-trip") {
     forAll { str: String => Component.render(Component.parse(str)) shouldBe str }
   }

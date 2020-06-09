@@ -34,6 +34,7 @@ final case class UpdatesConfig(
     pin: List[UpdatePattern] = List.empty,
     allow: List[UpdatePattern] = List.empty,
     ignore: List[UpdatePattern] = List.empty,
+    preRelease: List[UpdatePattern] = List.empty,
     limit: Option[PosInt] = None,
     includeScala: Option[Boolean] = None,
     fileExtensions: List[String] = List.empty
@@ -46,6 +47,11 @@ final case class UpdatesConfig(
       UpdatesConfig.defaultFileExtensions
     else
       fileExtensions.toSet
+
+  def isPreRelease(update: Update.Single): Boolean = {
+    val m = UpdatePattern.findMatch(preRelease, update, include = true)
+    m.filteredVersions.nonEmpty
+  }
 
   private def isAllowed(update: Update.Single): FilterResult = {
     val m = UpdatePattern.findMatch(allow, update, include = true)

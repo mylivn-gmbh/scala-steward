@@ -65,13 +65,15 @@ object FilterAlg {
   final case class NoSuitableNextVersion(update: Update.Single) extends RejectionReason
   final case class VersionOrderingConflict(update: Update.Single) extends RejectionReason
 
-  def globalFilter(update: Update.Single): FilterResult =
+  def globalFilter(update: Update.Single, allowPreRelease: Boolean = false): FilterResult =
     removeBadVersions(update)
-      .flatMap(selectSuitableNextVersion)
+      .flatMap(selectSuitableNextVersion(_, allowPreRelease))
       .flatMap(checkVersionOrdering)
 
   private def localFilter(update: Update.Single, repoConfig: RepoConfig): FilterResult =
-    repoConfig.updates.keep(update).flatMap(globalFilter)
+    repoConfig.updates
+      .keep(update)
+      .flatMap(u => globalFilter(u, repoConfig.updates.isPreRelease(u)))
 
   def isScalaDependency(dependency: Dependency): Boolean =
     (dependency.groupId.value, dependency.artifactId.name) match {
@@ -96,9 +98,12 @@ object FilterAlg {
       case _                     => false
     })
 
-  private def selectSuitableNextVersion(update: Update.Single): FilterResult = {
+  private def selectSuitableNextVersion(
+      update: Update.Single,
+      allowPreRelease: Boolean
+  ): FilterResult = {
     val newerVersions = update.newerVersions.map(Version.apply).toList
-    val maybeNext = Version(update.currentVersion).selectNext(newerVersions)
+    val maybeNext = Version(update.currentVersion).selectNext(newerVersions, allowPreRelease)
     maybeNext match {
       case Some(next) => Right(update.copy(newerVersions = Nel.of(next.value)))
       case None       => Left(NoSuitableNextVersion(update))
